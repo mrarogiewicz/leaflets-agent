@@ -1,0 +1,30 @@
+name: weekly-flyers
+
+on:
+  schedule:
+    # pondelok a štvrtok o 05:00 UTC; už uložené letáky sa preskočia
+    - cron: "0 5 * * 1,4"
+  workflow_dispatch:
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Stiahnuť letáky a nahrať do D1
+        run: python extract.py
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_D1_DATABASE_ID: ${{ secrets.CF_D1_DATABASE_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          KAUFLAND_REGION: "1220"
+          DATA_DIR: ${{ runner.temp }}/letaky
