@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import math
 import re
+import unicodedata
 from dataclasses import dataclass, field
 
 import pymupdf
@@ -92,6 +93,12 @@ class _Block:
             max(l.x1 for l in self.lines),
             max(l.y1 for l in self.lines),
         )
+
+
+def normalize_text(text: str) -> str:
+    """Malé písmená bez diakritiky, na vyhľadávanie (SQLite LOWER/LIKE zvláda len ASCII)."""
+    decomposed = unicodedata.normalize("NFKD", text.lower())
+    return "".join(c for c in decomposed if not unicodedata.combining(c))
 
 
 def _num(s: str) -> float:
