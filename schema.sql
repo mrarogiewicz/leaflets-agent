@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS offers (
   discount_pct    INTEGER,
   unit_price      REAL,
   unit_price_unit TEXT,
-  flags           TEXT
+  flags           TEXT,
+  search_text     TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_offers_flyer ON offers (flyer_id);
