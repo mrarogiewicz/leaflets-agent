@@ -8,12 +8,14 @@ from pathlib import Path
 
 import requests
 
+from flyer_parser import normalize_text
+
 SCHEMA_PATH = Path(__file__).with_name("schema.sql")
 INSERT_CHUNK = 40
 
 OFFER_COLUMNS = (
     "flyer_id, store, valid_from, valid_to, page, name, details, quantity, quantity_unit, "
-    "price, old_price, discount_pct, unit_price, unit_price_unit, flags"
+    "price, old_price, discount_pct, unit_price, unit_price_unit, flags, search_text"
 )
 
 
@@ -72,6 +74,10 @@ class D1:
     def ensure_schema(self) -> None:
         statements = [s.strip() for s in SCHEMA_PATH.read_text(encoding="utf-8").split(";") if s.strip()]
         self.batch(statements)
+        columns = {row["name"] for row in self.query("PRAGMA table_info(offers)")}
+        if "search_text" not in columns:
+            # migrácia staršej tabuľky: nový stĺpec sa naplní opätovným spracovaním letákov
+            self.batch(["ALTER TABLE offers ADD COLUMN search_text TEXT", "DELETE FROM flyers"])
 
     def flyer_pdf_url(self, flyer_id: str) -> str | None:
         rows = self.query(f"SELECT pdf_url FROM flyers WHERE flyer_id = {lit(flyer_id)}")
@@ -88,6 +94,7 @@ class D1:
                     flyer.flyer_id, flyer.store, flyer.valid_from, flyer.valid_to, o.page, o.name,
                     o.details, o.quantity, o.quantity_unit, o.price, o.old_price, o.discount_pct,
                     o.unit_price, o.unit_price_unit, o.flags,
+                    normalize_text(f"{o.name} {o.details}"),
                 )
                 rows.append("(" + ", ".join(lit(v) for v in values) + ")")
             statements.append(f"INSERT INTO offers ({OFFER_COLUMNS}) VALUES " + ", ".join(rows))
